@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Stagionalità - PLAYA SRL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+
+        .company-info {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .year-selector {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .year-tabs {
+            display: inline-flex;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .year-tab {
+            padding: 12px 25px;
+            margin: 0 2px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .year-tab.active {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .year-tab:hover:not(.active) {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-section {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .kpi-card.revenue {
+            border-left: 5px solid #27ae60;
+        }
+
+        .kpi-card.vat {
+            border-left: 5px solid #f39c12;
+        }
+
+        .kpi-card.avg-month {
+            border-left: 5px solid #9b59b6;
+        }
+
+        .kpi-card.peak-month {
+            border-left: 5px solid #e74c3c;
+        }
+
+        .kpi-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .kpi-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .seasonal-analysis {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .seasonal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .season-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .season-card.spring {
+            background: linear-gradient(135deg, #a8e6cf, #7fcdcd);
+        }
+
+        .season-card.summer {
+            background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+        }
+
+        .season-card.autumn {
+            background: linear-gradient(135deg, #ff9a56, #ffd93d);
+        }
+
+        .season-card.winter {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+        }
+
+        .season-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .season-months {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+
+        .season-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .insights {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .insight-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .kpi-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .year-tabs {
+                flex-direction: column;
+                width: 100%;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #7f8c8d;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header fade-in">
+            <h1>📊 Dashboard Stagionalità</h1>
+            <div class="subtitle">Analisi Corrispettivi e Andamento Vendite</div>
+            <div class="company-info">
+                <strong>PLAYA SRL</strong> • P.IVA: 04805160233 • Verona • Ristorazione con Somministrazione
+            </div>
+        </div>
+
+        <div class="year-selector fade-in">
+            <div class="year-tabs">
+                <button class="year-tab active" onclick="selectYear(2024)">2024</button>
+                <button class="year-tab" onclick="selectYear(2023)">2023</button>
+                <button class="year-tab" onclick="selectYear(2022)">2022</button>
+            </div>
+        </div>
+
+        <div id="dashboard-content" class="fade-in">
+            <!-- Il contenuto verrà generato dinamicamente -->
+        </div>
+    </div>
+
+    <script>
+        // Dati organizzati
+        const salesData = {
+            2024: [
+                {month: 'Gen', fullMonth: 'Gennaio', sales: 1446.40, vat: 149.38},
+                {month: 'Feb', fullMonth: 'Febbraio', sales: 440.20, vat: 40.02},
+                {month: 'Mar', fullMonth: 'Marzo', sales: 5144.26, vat: 468.31},
+                {month: 'Apr', fullMonth: 'Aprile', sales: 12844.05, vat: 1167.64},
+                {month: 'Mag', fullMonth: 'Maggio', sales: 10506.30, vat: 955.13},
+                {month: 'Giu', fullMonth: 'Giugno', sales: 24316.90, vat: 2441.95},
+                {month: 'Lug', fullMonth: 'Luglio', sales: 42543.96, vat: 4643.53},
+                {month: 'Ago', fullMonth: 'Agosto', sales: 43152.78, vat: 4642.03},
+                {month: 'Set', fullMonth: 'Settembre', sales: 5184.00, vat: 525.71},
+                {month: 'Ott', fullMonth: 'Ottobre', sales: 4751.60, vat: 441.61},
+                {month: 'Nov', fullMonth: 'Novembre', sales: 933.20, vat: 85.55},
+                {month: 'Dic', fullMonth: 'Dicembre', sales: 4573.30, vat: 415.76}
+            ],
+            2023: [
+                {month: 'Gen', fullMonth: 'Gennaio', sales: 0, vat: 0},
+                {month: 'Feb', fullMonth: 'Febbraio', sales: 0, vat: 0},
+                {month: 'Mar', fullMonth: 'Marzo', sales: 0, vat: 0},
+                {month: 'Apr', fullMonth: 'Aprile', sales: 0, vat: 0},
+                {month: 'Mag', fullMonth: 'Maggio', sales: 659.70, vat: 67.73},
+                {month: 'Giu', fullMonth: 'Giugno', sales: 18257.20, vat: 1937.93},
+                {month: 'Lug', fullMonth: 'Luglio', sales: 31381.72, vat: 3334.46},
+                {month: 'Ago', fullMonth: 'Agosto', sales: 35557.91, vat: 3995.69},
+                {month: 'Set', fullMonth: 'Settembre', sales: 6690.80, vat: 693.48},
+                {month: 'Ott', fullMonth: 'Ottobre', sales: 1443.90, vat: 134.12},
+                {month: 'Nov', fullMonth: 'Novembre', sales: 155.60, vat: 14.15},
+                {month: 'Dic', fullMonth: 'Dicembre', sales: 382.00, vat: 34.73}
+            ],
+            2022: [
+                {month: 'Gen', fullMonth: 'Gennaio', sales: 0, vat: 0},
+                {month: 'Feb', fullMonth: 'Febbraio', sales: 692.50, vat: 62.95},
+                {month: 'Mar', fullMonth: 'Marzo', sales: 0, vat: 0},
+                {month: 'Apr', fullMonth: 'Aprile', sales: 0, vat: 0},
+                {month: 'Mag', fullMonth: 'Maggio', sales: 4526.05, vat: 460.23},
+                {month: 'Giu', fullMonth: 'Giugno', sales: 21177.97, vat: 2327.39},
+                {month: 'Lug', fullMonth: 'Luglio', sales: 25099.93, vat: 2791.51},
+                {month: 'Ago', fullMonth: 'Agosto', sales: 22195.70, vat: 2450.09},
+                {month: 'Set', fullMonth: 'Settembre', sales: 2168.20, vat: 258.20},
+                {month: 'Ott', fullMonth: 'Ottobre', sales: 560.00, vat: 50.91},
+                {month: 'Nov', fullMonth: 'Novembre', sales: 0, vat: 0},
+                {month: 'Dic', fullMonth: 'Dicembre', sales: 0, vat: 0}
+            ]
+        };
+
+        let currentYear = 2024;
+        let monthlyChart = null;
+        let seasonalChart = null;
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('it-IT', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(value);
+        }
+
+        function selectYear(year) {
+            currentYear = year;
+            
+            // Aggiorna i tab
+            document.querySelectorAll('.year-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Ricarica la dashboard
+            loadDashboard(year);
+        }
+
+        function calculateKPIs(data) {
+            const activeMonths = data.filter(m => m.sales > 0);
+            const totalSales = data.reduce((sum, m) => sum + m.sales, 0);
+            const totalVAT = data.reduce((sum, m) => sum + m.vat, 0);
+            const avgMonthly = activeMonths.length > 0 ? totalSales / activeMonths.length : 0;
+            const peakMonth = data.reduce((max, m) => m.sales > max.sales ? m : max, {sales: 0, fullMonth: 'N/A'});
+            
+            return {
+                totalSales,
+                totalVAT,
+                avgMonthly,
+                peakMonth: peakMonth.fullMonth,
+                peakValue: peakMonth.sales,
+                activeMonths: activeMonths.length
+            };
+        }
+
+        function calculateSeasonalData(data) {
+            return {
+                spring: data[2].sales + data[3].sales + data[4].sales, // Mar, Apr, Mag
+                summer: data[5].sales + data[6].sales + data[7].sales, // Giu, Lug, Ago
+                autumn: data[8].sales + data[9].sales + data[10].sales, // Set, Ott, Nov
+                winter: data[11].sales + data[0].sales + data[1].sales  // Dic, Gen, Feb
+            };
+        }
+
+        function generateInsights(data, year) {
+            const kpis = calculateKPIs(data);
+            const seasonalData = calculateSeasonalData(data);
+            const insights = [];
+
+            // Trova la stagione di picco
+            const seasons = Object.entries(seasonalData);
+            const peakSeason = seasons.reduce((max, current) => current[1] > max[1] ? current : max);
+            
+            insights.push({
+                icon: '🏆',
+                text: `Il ${year} ha registrato un fatturato totale di ${formatCurrency(kpis.totalSales)} in ${kpis.activeMonths} mesi operativi.`
+            });
+            
+            insights.push({
+                icon: '📈',
+                text: `Il mese di picco è stato ${kpis.peakMonth} con ${formatCurrency(kpis.peakValue)}.`
+            });
+            
+            if (kpis.avgMonthly > 0) {
+                insights.push({
+                    icon: '📊',
+                    text: `Media mensile di ${formatCurrency(kpis.avgMonthly)} sui mesi attivi.`
+                });
+            }
+
+            const seasonNames = {
+                'spring': 'Primavera',
+                'summer': 'Estate', 
+                'autumn': 'Autunno',
+                'winter': 'Inverno'
+            };
+            
+            insights.push({
+                icon: '🌟',
+                text: `La stagione migliore è stata l'${seasonNames[peakSeason[0]]} con ${formatCurrency(peakSeason[1])}.`
+            });
+
+            return insights;
+        }
+
+        function loadDashboard(year) {
+            const data = salesData[year];
+            const kpis = calculateKPIs(data);
+            const seasonalData = calculateSeasonalData(data);
+            const insights = generateInsights(data, year);
+
+            const dashboardHTML = `
+                <div class="kpi-section">
+                    <div class="kpi-card revenue">
+                        <div class="kpi-value">${formatCurrency(kpis.totalSales)}</div>
+                        <div class="kpi-label">Fatturato Totale</div>
+                    </div>
+                    <div class="kpi-card vat">
+                        <div class="kpi-value">${formatCurrency(kpis.totalVAT)}</div>
+                        <div class="kpi-label">IVA Totale</div>
+                    </div>
+                    <div class="kpi-card avg-month">
+                        <div class="kpi-value">${formatCurrency(kpis.avgMonthly)}</div>
+                        <div class="kpi-label">Media Mensile</div>
+                    </div>
+                    <div class="kpi-card peak-month">
+                        <div class="kpi-value">${kpis.peakMonth}</div>
+                        <div class="kpi-label">Mese di Picco</div>
+                    </div>
+                </div>
+
+                <div class="dashboard">
+                    <div class="chart-container">
+                        <div class="chart-title">📈 Andamento Mensile ${year}</div>
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">🔄 Distribuzione Stagionale</div>
+                        <canvas id="seasonalChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="seasonal-analysis">
+                    <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">🗓️ Analisi Stagionale ${year}</h3>
+                    <div class="seasonal-grid">
+                        <div class="season-card spring">
+                            <div class="season-title">🌸 Primavera</div>
+                            <div class="season-months">Mar • Apr • Mag</div>
+                            <div class="season-value">${formatCurrency(seasonalData.spring)}</div>
+                        </div>
+                        <div class="season-card summer">
+                            <div class="season-title">☀️ Estate</div>
+                            <div class="season-months">Giu • Lug • Ago</div>
+                            <div class="season-value">${formatCurrency(seasonalData.summer)}</div>
+                        </div>
+                        <div class="season-card autumn">
+                            <div class="season-title">🍂 Autunno</div>
+                            <div class="season-months">Set • Ott • Nov</div>
+                            <div class="season-value">${formatCurrency(seasonalData.autumn)}</div>
+                        </div>
+                        <div class="season-card winter">
+                            <div class="season-title">❄️ Inverno</div>
+                            <div class="season-months">Dic • Gen • Feb</div>
+                            <div class="season-value">${formatCurrency(seasonalData.winter)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insights">
+                    <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">💡 Insights Chiave ${year}</h3>
+                    ${insights.map(insight => `
+                        <div class="insight-item">
+                            <span class="insight-icon">${insight.icon}</span>
+                            <span>${insight.text}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            document.getElementById('dashboard-content').innerHTML = dashboardHTML;
+            
+            // Crea i grafici
+            setTimeout(() => {
+                createMonthlyChart(data, year);
+                createSeasonalChart(seasonalData, year);
+            }, 100);
+        }
+
+        function createMonthlyChart(data, year) {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            
+            if (monthlyChart) {
+                monthlyChart.destroy();
+            }
+
+            monthlyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.month),
+                    datasets: [{
+                        label: 'Fatturato (€)',
+                        data: data.map(d => d.sales),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#e74c3c',
+                        pointBorderColor: '#c0392b',
+                        pointBorderWidth: 2,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toLocaleString('it-IT');
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        function createSeasonalChart(seasonalData, year) {
+            const ctx = document.getElementById('seasonalChart').getContext('2d');
+            
+            if (seasonalChart) {
+                seasonalChart.destroy();
+            }
+
+            seasonalChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['🌸 Primavera', '☀️ Estate', '🍂 Autunno', '❄️ Inverno'],
+                    datasets: [{
+                        data: [seasonalData.spring, seasonalData.summer, seasonalData.autumn, seasonalData.winter],
+                        backgroundColor: [
+                            '#a8e6cf',
+                            '#ff6b6b', 
+                            '#ffd93d',
+                            '#74b9ff'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + formatCurrency(context.parsed);
+                                }
+                            }
+                        }
+                    },
+                    cutout: '50%'
+                }
+            });
+        }
+
+        // Carica la dashboard iniziale
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard(currentYear);
+        });
+    </script>
+</body>
+</html>
