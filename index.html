@@ -1,93 +1,746 @@
-<script>
-        // Dati ricavi (dal dashboard originale)
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLAYA SRL - Financial Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a365d;
+            --secondary-color: #2d3748;
+            --accent-color: #3182ce;
+            --success-color: #38a169;
+            --warning-color: #ed8936;
+            --danger-color: #e53e3e;
+            --light-bg: #f7fafc;
+            --white: #ffffff;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header Semplificato */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .header .subtitle {
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+
+        .company-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: 0.025em;
+        }
+
+        /* Controls Eleganti */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: var(--white);
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .year-selector {
+            display: flex;
+            background: var(--gray-100);
+            border-radius: 12px;
+            padding: 0.25rem;
+        }
+
+        .year-tab {
+            padding: 0.75rem 1.5rem;
+            margin: 0;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            color: var(--gray-600);
+            min-width: 80px;
+        }
+
+        .year-tab.active {
+            background: var(--accent-color);
+            color: var(--white);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .year-tab:hover:not(.active) {
+            background: var(--gray-200);
+            color: var(--gray-800);
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, var(--success-color), #48bb78);
+            color: var(--white);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .export-btn:disabled {
+            background: var(--gray-300);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* KPI Cards Compatte */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-color);
+        }
+
+        .kpi-card.revenue::before { background: var(--success-color); }
+        .kpi-card.costs::before { background: var(--danger-color); }
+        .kpi-card.profit::before { background: var(--warning-color); }
+        .kpi-card.margin::before { background: var(--accent-color); }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .kpi-icon {
+            font-size: 1.5rem;
+            opacity: 0.7;
+        }
+
+        .kpi-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.025em;
+        }
+
+        .kpi-label {
+            font-size: 0.8rem;
+            color: var(--gray-600);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Layout Principale */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-section {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .chart-container {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 300px;
+        }
+
+        .chart-wrapper canvas {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .chart-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        /* Sidebar Insights */
+        .sidebar {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .insights-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .insights-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .insights-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            background: var(--gray-50);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .insight-icon {
+            font-size: 1.25rem;
+            margin-top: 0.125rem;
+        }
+
+        .insight-text {
+            flex: 1;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: var(--gray-700);
+        }
+
+        /* Seasonal Analysis */
+        .seasonal-section {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 2rem;
+        }
+
+        .seasonal-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .seasonal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .seasonal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .season-card {
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .season-card.spring {
+            background: linear-gradient(135deg, #d4edda, #a3d5b8);
+            color: var(--gray-800);
+        }
+
+        .season-card.summer {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            color: var(--gray-800);
+        }
+
+        .season-card.autumn {
+            background: linear-gradient(135deg, #f8d7da, #fab1a0);
+            color: var(--gray-800);
+        }
+
+        .season-card.winter {
+            background: linear-gradient(135deg, #d6eaf8, #74b9ff);
+            color: var(--white);
+        }
+
+        .season-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .season-months {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .season-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        /* Data Table */
+        .data-table {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .table-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-700);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .number {
+            text-align: right;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .positive { color: var(--success-color); }
+        .negative { color: var(--danger-color); }
+
+        /* Loading Animation */
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--white);
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+            
+            .seasonal-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                padding: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Fade In Animation */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Semplificato -->
+        <div class="header fade-in">
+            <h1>Financial Dashboard</h1>
+            <div class="subtitle">Analisi Ricavi, Costi e Marginalità</div>
+            <div class="company-name">PLAYA SRL</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls fade-in">
+            <div class="year-selector">
+                <button class="year-tab active" onclick="selectYear(2024)">2024</button>
+                <button class="year-tab" onclick="selectYear(2023)">2023</button>
+                <button class="year-tab" onclick="selectYear(2022)">2022</button>
+            </div>
+            <button id="exportBtn" class="export-btn" onclick="generatePDF()">
+                <span>📊</span>
+                <span id="exportBtnText">Esporta Report</span>
+            </button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div id="kpi-section" class="fade-in">
+            <!-- Generato dinamicamente -->
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid fade-in">
+            <!-- Charts Section -->
+            <div class="chart-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Andamento Ricavi vs Costi</div>
+                            <div class="chart-subtitle">Confronto mensile delle performance</div>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Marginalità Mensile</div>
+                            <div class="chart-subtitle">Percentuale di margine per mese</div>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="marginChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="insights-card">
+                    <div class="insights-header">
+                        <span>💡</span>
+                        <div class="insights-title">Key Insights</div>
+                    </div>
+                    <div id="insights-content">
+                        <!-- Generato dinamicamente -->
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Trend Stagionale</div>
+                            <div class="chart-subtitle">Andamento ricavi per stagione</div>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="seasonalChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seasonal Analysis -->
+        <div id="seasonal-section" class="fade-in">
+            <!-- Generato dinamicamente -->
+        </div>
+
+        <!-- Data Table -->
+        <div id="data-table" class="fade-in">
+            <!-- Generato dinamicamente -->
+        </div>
+    </div>
+
+    <script>
+        // Dati ricavi corretti
         const salesData = {
             2024: [
-                {month: 'Gen', fullMonth: 'Gennaio', sales: 1446.40, vat: 149.38},
-                {month: 'Feb', fullMonth: 'Febbraio', sales: 440.20, vat: 40.02},
-                {month: 'Mar', fullMonth: 'Marzo', sales: 5144.26, vat: 468.31},
-                {month: 'Apr', fullMonth: 'Aprile', sales: 12844.05, vat: 1167.64},
-                {month: 'Mag', fullMonth: 'Maggio', sales: 10506.30, vat: 955.13},
-                {month: 'Giu', fullMonth: 'Giugno', sales: 24316.90, vat: 2441.95},
-                {month: 'Lug', fullMonth: 'Luglio', sales: 42543.96, vat: 4643.53},
-                {month: 'Ago', fullMonth: 'Agosto', sales: 43152.78, vat: 4642.03},
-                {month: 'Set', fullMonth: 'Settembre', sales: 5184.00, vat: 525.71},
-                {month: 'Ott', fullMonth: 'Ottobre', sales: 4751.60, vat: 441.61},
-                {month: 'Nov', fullMonth: 'Novembre', sales: 933.20, vat: 85.55},
-                {month: 'Dic', fullMonth: 'Dicembre', sales: 4573.30, vat: 415.76}
+                {month: 'Gen', fullMonth: 'Gennaio', sales: 1297.02},
+                {month: 'Feb', fullMonth: 'Febbraio', sales: 627.45},
+                {month: 'Mar', fullMonth: 'Marzo', sales: 10592.94},
+                {month: 'Apr', fullMonth: 'Aprile', sales: 12017.25},
+                {month: 'Mag', fullMonth: 'Maggio', sales: 11246.63},
+                {month: 'Giu', fullMonth: 'Giugno', sales: 22305.76},
+                {month: 'Lug', fullMonth: 'Luglio', sales: 38623.64},
+                {month: 'Ago', fullMonth: 'Agosto', sales: 39212.26},
+                {month: 'Set', fullMonth: 'Settembre', sales: 4869.21},
+                {month: 'Ott', fullMonth: 'Ottobre', sales: 4309.99},
+                {month: 'Nov', fullMonth: 'Novembre', sales: 1111.29},
+                {month: 'Dic', fullMonth: 'Dicembre', sales: 8966.99}
             ],
             2023: [
-                {month: 'Gen', fullMonth: 'Gennaio', sales: 0, vat: 0},
-                {month: 'Feb', fullMonth: 'Febbraio', sales: 0, vat: 0},
-                {month: 'Mar', fullMonth: 'Marzo', sales: 0, vat: 0},
-                {month: 'Apr', fullMonth: 'Aprile', sales: 0, vat: 0},
-                {month: 'Mag', fullMonth: 'Maggio', sales: 659.70, vat: 67.73},
-                {month: 'Giu', fullMonth: 'Giugno', sales: 18257.20, vat: 1937.93},
-                {month: 'Lug', fullMonth: 'Luglio', sales: 31381.72, vat: 3334.46},
-                {month: 'Ago', fullMonth: 'Agosto', sales: 35557.91, vat: 3995.69},
-                {month: 'Set', fullMonth: 'Settembre', sales: 6690.80, vat: 693.48},
-                {month: 'Ott', fullMonth: 'Ottobre', sales: 1443.90, vat: 134.12},
-                {month: 'Nov', fullMonth: 'Novembre', sales: 155.60, vat: 14.15},
-                {month: 'Dic', fullMonth: 'Dicembre', sales: 382.00, vat: 34.73}
+                {month: 'Gen', fullMonth: 'Gennaio', sales: 0},
+                {month: 'Feb', fullMonth: 'Febbraio', sales: 0},
+                {month: 'Mar', fullMonth: 'Marzo', sales: 0},
+                {month: 'Apr', fullMonth: 'Aprile', sales: 0},
+                {month: 'Mag', fullMonth: 'Maggio', sales: 591.97},
+                {month: 'Giu', fullMonth: 'Giugno', sales: 16826.09},
+                {month: 'Lug', fullMonth: 'Luglio', sales: 28047.26},
+                {month: 'Ago', fullMonth: 'Agosto', sales: 31562.22},
+                {month: 'Set', fullMonth: 'Settembre', sales: 5997.32},
+                {month: 'Ott', fullMonth: 'Ottobre', sales: 1309.78},
+                {month: 'Nov', fullMonth: 'Novembre', sales: 141.45},
+                {month: 'Dic', fullMonth: 'Dicembre', sales: 347.27}
             ],
             2022: [
-                {month: 'Gen', fullMonth: 'Gennaio', sales: 0, vat: 0},
-                {month: 'Feb', fullMonth: 'Febbraio', sales: 692.50, vat: 62.95},
-                {month: 'Mar', fullMonth: 'Marzo', sales: 0, vat: 0},
-                {month: 'Apr', fullMonth: 'Aprile', sales: 0, vat: 0},
-                {month: 'Mag', fullMonth: 'Maggio', sales: 4526.05, vat: 460.23},
-                {month: 'Giu', fullMonth: 'Giugno', sales: 21177.97, vat: 2327.39},
-                {month: 'Lug', fullMonth: 'Luglio', sales: 25099.93, vat: 2791.51},
-                {month: 'Ago', fullMonth: 'Agosto', sales: 22195.70, vat: 2450.09},
-                {month: 'Set', fullMonth: 'Settembre', sales: 2168.20, vat: 258.20},
-                {month: 'Ott', fullMonth: 'Ottobre', sales: 560.00, vat: 50.91},
-                {month: 'Nov', fullMonth: 'Novembre', sales: 0, vat: 0},
-                {month: 'Dic', fullMonth: 'Dicembre', sales: 0, vat: 0}
+                {month: 'Gen', fullMonth: 'Gennaio', sales: 0},
+                {month: 'Feb', fullMonth: 'Febbraio', sales: 629.55},
+                {month: 'Mar', fullMonth: 'Marzo', sales: 0},
+                {month: 'Apr', fullMonth: 'Aprile', sales: 0},
+                {month: 'Mag', fullMonth: 'Maggio', sales: 7270.37},
+                {month: 'Giu', fullMonth: 'Giugno', sales: 19050.58},
+                {month: 'Lug', fullMonth: 'Luglio', sales: 22308.42},
+                {month: 'Ago', fullMonth: 'Agosto', sales: 20877.43},
+                {month: 'Set', fullMonth: 'Settembre', sales: 2321.82},
+                {month: 'Ott', fullMonth: 'Ottobre', sales: 509.09},
+                {month: 'Nov', fullMonth: 'Novembre', sales: 0},
+                {month: 'Dic', fullMonth: 'Dicembre', sales: 0}
             ]
         };
 
-        // Dati costi estratti dai registri
         const costsData = {
             2024: [
-                {month: 'Gen', fullMonth: 'Gennaio', costs: 10610.98},
-                {month: 'Feb', fullMonth: 'Febbraio', costs: 5758.81},
-                {month: 'Mar', fullMonth: 'Marzo', costs: 11004.29},
-                {month: 'Apr', fullMonth: 'Aprile', costs: 14395.90},
-                {month: 'Mag', fullMonth: 'Maggio', costs: 16713.35},
-                {month: 'Giu', fullMonth: 'Giugno', costs: 21041.74},
-                {month: 'Lug', fullMonth: 'Luglio', costs: 26653.67},
-                {month: 'Ago', fullMonth: 'Agosto', costs: 24921.83},
-                {month: 'Set', fullMonth: 'Settembre', costs: 12299.38},
-                {month: 'Ott', fullMonth: 'Ottobre', costs: 10041.83},
-                {month: 'Nov', fullMonth: 'Novembre', costs: 4957.58},
-                {month: 'Dic', fullMonth: 'Dicembre', costs: 9559.62}
+                {month: 'Gen', fullMonth: 'Gennaio', costs: 8899.09},
+                {month: 'Feb', fullMonth: 'Febbraio', costs: 4806.94},
+                {month: 'Mar', fullMonth: 'Marzo', costs: 9394.15},
+                {month: 'Apr', fullMonth: 'Aprile', costs: 12299.82},
+                {month: 'Mag', fullMonth: 'Maggio', costs: 14141.38},
+                {month: 'Giu', fullMonth: 'Giugno', costs: 18169.48},
+                {month: 'Lug', fullMonth: 'Luglio', costs: 22874.96},
+                {month: 'Ago', fullMonth: 'Agosto', costs: 21481.10},
+                {month: 'Set', fullMonth: 'Settembre', costs: 10346.44},
+                {month: 'Ott', fullMonth: 'Ottobre', costs: 8354.07},
+                {month: 'Nov', fullMonth: 'Novembre', costs: 4234.35},
+                {month: 'Dic', fullMonth: 'Dicembre', costs: 8182.91}
             ],
             2023: [
-                {month: 'Gen', fullMonth: 'Gennaio', costs: 3079.67},
-                {month: 'Feb', fullMonth: 'Febbraio', costs: 2298.70},
-                {month: 'Mar', fullMonth: 'Marzo', costs: 3182.12},
-                {month: 'Apr', fullMonth: 'Aprile', costs: 1973.67},
-                {month: 'Mag', fullMonth: 'Maggio', costs: 3805.06},
-                {month: 'Giu', fullMonth: 'Giugno', costs: 16139.73},
-                {month: 'Lug', fullMonth: 'Luglio', costs: 21359.67},
-                {month: 'Ago', fullMonth: 'Agosto', costs: 26282.79},
-                {month: 'Set', fullMonth: 'Settembre', costs: 21658.86},
-                {month: 'Ott', fullMonth: 'Ottobre', costs: 8384.57},
-                {month: 'Nov', fullMonth: 'Novembre', costs: 8727.20},
-                {month: 'Dic', fullMonth: 'Dicembre', costs: 5112.35}
+                {month: 'Gen', fullMonth: 'Gennaio', costs: 2523.76},
+                {month: 'Feb', fullMonth: 'Febbraio', costs: 1897.88},
+                {month: 'Mar', fullMonth: 'Marzo', costs: 2749.55},
+                {month: 'Apr', fullMonth: 'Aprile', costs: 1618.33},
+                {month: 'Mag', fullMonth: 'Maggio', costs: 3237.84},
+                {month: 'Giu', fullMonth: 'Giugno', costs: 13948.20},
+                {month: 'Lug', fullMonth: 'Luglio', costs: 18329.06},
+                {month: 'Ago', fullMonth: 'Agosto', costs: 22769.98},
+                {month: 'Set', fullMonth: 'Settembre', costs: 18497.52},
+                {month: 'Ott', fullMonth: 'Ottobre', costs: 6898.07},
+                {month: 'Nov', fullMonth: 'Novembre', costs: 7435.73},
+                {month: 'Dic', fullMonth: 'Dicembre', costs: 4246.65}
             ],
             2022: [
-                {month: 'Gen', fullMonth: 'Gennaio', costs: 1344.00},
-                {month: 'Feb', fullMonth: 'Febbraio', costs: 2197.00},
-                {month: 'Mar', fullMonth: 'Marzo', costs: 2289.00},
-                {month: 'Apr', fullMonth: 'Aprile', costs: 2348.00},
-                {month: 'Mag', fullMonth: 'Maggio', costs: 8009.93},
-                {month: 'Giu', fullMonth: 'Giugno', costs: 20215.33},
-                {month: 'Lug', fullMonth: 'Luglio', costs: 23337.81},
-                {month: 'Ago', fullMonth: 'Agosto', costs: 18144.80},
-                {month: 'Set', fullMonth: 'Settembre', costs: 6688.47},
-                {month: 'Ott', fullMonth: 'Ottobre', costs: 9303.16},
-                {month: 'Nov', fullMonth: 'Novembre', costs: 3580.29},
-                {month: 'Dic', fullMonth: 'Dicembre', costs: 2316.89}
+                {month: 'Gen', fullMonth: 'Gennaio', costs: 870.02},
+                {month: 'Feb', fullMonth: 'Febbraio', costs: 1813.49},
+                {month: 'Mar', fullMonth: 'Marzo', costs: 1876.19},
+                {month: 'Apr', fullMonth: 'Aprile', costs: 1924.49},
+                {month: 'Mag', fullMonth: 'Maggio', costs: 6792.50},
+                {month: 'Giu', fullMonth: 'Giugno', costs: 17338.44},
+                {month: 'Lug', fullMonth: 'Luglio', costs: 19949.90},
+                {month: 'Ago', fullMonth: 'Agosto', costs: 15858.14},
+                {month: 'Set', fullMonth: 'Settembre', costs: 5731.29},
+                {month: 'Ott', fullMonth: 'Ottobre', costs: 7577.64},
+                {month: 'Nov', fullMonth: 'Novembre', costs: 2968.74},
+                {month: 'Dic', fullMonth: 'Dicembre', costs: 1923.46}
             ]
         };
 
@@ -105,16 +758,18 @@
             return (value * 100).toFixed(1) + '%';
         }
 
+        function updateTimestamp() {
+            // Rimossa la funzione di aggiornamento timestamp
+        }
+
         function selectYear(year) {
             currentYear = year;
             
-            // Aggiorna i tab
             document.querySelectorAll('.year-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             event.target.classList.add('active');
             
-            // Ricarica la dashboard
             loadDashboard(year);
         }
 
@@ -137,28 +792,24 @@
 
         function calculateSeasonalData(salesData, costsData) {
             const seasons = {
-                spring: { sales: 0, costs: 0, profit: 0 }, // Mar, Apr, Mag
-                summer: { sales: 0, costs: 0, profit: 0 }, // Giu, Lug, Ago
-                autumn: { sales: 0, costs: 0, profit: 0 }, // Set, Ott, Nov
-                winter: { sales: 0, costs: 0, profit: 0 }  // Dic, Gen, Feb
+                spring: { sales: 0, costs: 0, profit: 0 },
+                summer: { sales: 0, costs: 0, profit: 0 },
+                autumn: { sales: 0, costs: 0, profit: 0 },
+                winter: { sales: 0, costs: 0, profit: 0 }
             };
 
-            // Primavera (Mar=2, Apr=3, Mag=4)
             seasons.spring.sales = salesData[2].sales + salesData[3].sales + salesData[4].sales;
             seasons.spring.costs = costsData[2].costs + costsData[3].costs + costsData[4].costs;
             seasons.spring.profit = seasons.spring.sales - seasons.spring.costs;
 
-            // Estate (Giu=5, Lug=6, Ago=7)
             seasons.summer.sales = salesData[5].sales + salesData[6].sales + salesData[7].sales;
             seasons.summer.costs = costsData[5].costs + costsData[6].costs + costsData[7].costs;
             seasons.summer.profit = seasons.summer.sales - seasons.summer.costs;
 
-            // Autunno (Set=8, Ott=9, Nov=10)
             seasons.autumn.sales = salesData[8].sales + salesData[9].sales + salesData[10].sales;
             seasons.autumn.costs = costsData[8].costs + costsData[9].costs + costsData[10].costs;
             seasons.autumn.profit = seasons.autumn.sales - seasons.autumn.costs;
 
-            // Inverno (Dic=11, Gen=0, Feb=1)
             seasons.winter.sales = salesData[11].sales + salesData[0].sales + salesData[1].sales;
             seasons.winter.costs = costsData[11].costs + costsData[0].costs + costsData[1].costs;
             seasons.winter.profit = seasons.winter.sales - seasons.winter.costs;
@@ -172,20 +823,19 @@
 
             insights.push({
                 icon: '💰',
-                text: `Nel ${year} il fatturato è stato di ${formatCurrency(kpis.totalSales)} con costi di ${formatCurrency(kpis.totalCosts)}.`
+                text: `Il fatturato totale del ${year} è stato di ${formatCurrency(kpis.totalSales)} con costi operativi pari a ${formatCurrency(kpis.totalCosts)}.`
             });
             
             insights.push({
-                icon: '📈',
-                text: `Il margine operativo è stato di ${formatCurrency(kpis.totalProfit)} (${formatPercentage(kpis.marginPercentage)}).`
+                icon: '📊',
+                text: `L'utile operativo registrato è di ${formatCurrency(kpis.totalProfit)} con un margine del ${formatPercentage(kpis.marginPercentage)}.`
             });
             
             insights.push({
                 icon: '🏆',
-                text: `Il mese migliore è stato ${kpis.peakMonth} in termini di fatturato.`
+                text: `Il mese con le migliori performance è stato ${kpis.peakMonth} in termini di ricavi.`
             });
 
-            // Analisi stagionale
             const seasonal = calculateSeasonalData(salesData, costsData);
             const bestSeason = Object.entries(seasonal)
                 .reduce((max, [name, data]) => data.profit > max.profit ? {name, ...data} : max, {name: '', profit: -Infinity});
@@ -199,7 +849,7 @@
             
             insights.push({
                 icon: '🌟',
-                text: `La stagione più redditizia è l'${seasonNames[bestSeason.name]} con un utile di ${formatCurrency(bestSeason.profit)}.`
+                text: `La stagione più profittevole è risultata l'${seasonNames[bestSeason.name]} con un utile di ${formatCurrency(bestSeason.profit)}.`
             });
 
             return insights;
@@ -212,53 +862,58 @@
             const seasonalData = calculateSeasonalData(sales, costs);
             const insights = generateInsights(sales, costs, year);
 
-            const dashboardHTML = `
-                <div class="kpi-section">
+            // Aggiorna KPI Cards
+            document.getElementById('kpi-section').innerHTML = `
+                <div class="kpi-grid">
                     <div class="kpi-card revenue">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">💰</div>
+                        </div>
                         <div class="kpi-value">${formatCurrency(kpis.totalSales)}</div>
                         <div class="kpi-label">Ricavi Totali</div>
                     </div>
                     <div class="kpi-card costs">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">📉</div>
+                        </div>
                         <div class="kpi-value">${formatCurrency(kpis.totalCosts)}</div>
                         <div class="kpi-label">Costi Totali</div>
                     </div>
                     <div class="kpi-card profit">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">📈</div>
+                        </div>
                         <div class="kpi-value">${formatCurrency(kpis.totalProfit)}</div>
                         <div class="kpi-label">Utile Operativo</div>
                     </div>
                     <div class="kpi-card margin">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">🎯</div>
+                        </div>
                         <div class="kpi-value">${formatPercentage(kpis.marginPercentage)}</div>
-                        <div class="kpi-label">Margine %</div>
-                    </div>
-                    <div class="kpi-card peak-month">
-                        <div class="kpi-value">${kpis.peakMonth}</div>
-                        <div class="kpi-label">Mese Migliore</div>
+                        <div class="kpi-label">Margine Operativo</div>
                     </div>
                 </div>
+            `;
 
-                <div class="three-column">
-                    <div class="chart-container">
-                        <div class="chart-title">📈 Ricavi vs Costi</div>
-                        <canvas id="revenueChart"></canvas>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <div class="chart-title">💰 Margini Mensili</div>
-                        <canvas id="marginChart"></canvas>
-                    </div>
-
-                    <div class="chart-container">
-                        <div class="chart-title">🔄 Distribuzione Stagionale</div>
-                        <canvas id="seasonalChart"></canvas>
-                    </div>
+            // Aggiorna Insights
+            document.getElementById('insights-content').innerHTML = insights.map(insight => `
+                <div class="insight-item">
+                    <div class="insight-icon">${insight.icon}</div>
+                    <div class="insight-text">${insight.text}</div>
                 </div>
+            `).join('');
 
-                <div class="seasonal-analysis">
-                    <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">🗓️ Analisi Stagionale ${year}</h3>
+            // Aggiorna Seasonal Analysis
+            document.getElementById('seasonal-section').innerHTML = `
+                <div class="seasonal-section">
+                    <div class="seasonal-header">
+                        <div class="seasonal-title">Analisi Stagionale ${year}</div>
+                    </div>
                     <div class="seasonal-grid">
                         <div class="season-card spring">
                             <div class="season-title">🌸 Primavera</div>
-                            <div class="season-months">Mar • Apr • Mag</div>
+                            <div class="season-months">Marzo • Aprile • Maggio</div>
                             <div class="season-metrics">
                                 <div class="metric-item">
                                     <div class="metric-label">Ricavi</div>
@@ -280,7 +935,7 @@
                         </div>
                         <div class="season-card summer">
                             <div class="season-title">☀️ Estate</div>
-                            <div class="season-months">Giu • Lug • Ago</div>
+                            <div class="season-months">Giugno • Luglio • Agosto</div>
                             <div class="season-metrics">
                                 <div class="metric-item">
                                     <div class="metric-label">Ricavi</div>
@@ -302,7 +957,7 @@
                         </div>
                         <div class="season-card autumn">
                             <div class="season-title">🍂 Autunno</div>
-                            <div class="season-months">Set • Ott • Nov</div>
+                            <div class="season-months">Settembre • Ottobre • Novembre</div>
                             <div class="season-metrics">
                                 <div class="metric-item">
                                     <div class="metric-label">Ricavi</div>
@@ -324,7 +979,7 @@
                         </div>
                         <div class="season-card winter">
                             <div class="season-title">❄️ Inverno</div>
-                            <div class="season-months">Dic • Gen • Feb</div>
+                            <div class="season-months">Dicembre • Gennaio • Febbraio</div>
                             <div class="season-metrics">
                                 <div class="metric-item">
                                     <div class="metric-label">Ricavi</div>
@@ -346,19 +1001,44 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="insights">
-                    <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">💡 Insights Chiave ${year}</h3>
-                    ${insights.map(insight => `
-                        <div class="insight-item">
-                            <span class="insight-icon">${insight.icon}</span>
-                            <span>${insight.text}</span>
-                        </div>
-                    `).join('')}
-                </div>
             `;
 
-            document.getElementById('dashboard-content').innerHTML = dashboardHTML;
+            // Aggiorna Data Table
+            document.getElementById('data-table').innerHTML = `
+                <div class="data-table">
+                    <div class="table-header">
+                        <div class="table-title">Dettaglio Mensile ${year}</div>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Periodo</th>
+                                    <th class="number">Ricavi</th>
+                                    <th class="number">Costi</th>
+                                    <th class="number">Utile</th>
+                                    <th class="number">Margine %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sales.map((month, index) => {
+                                    const profit = month.sales - costs[index].costs;
+                                    const margin = month.sales > 0 ? (profit / month.sales) * 100 : 0;
+                                    return `
+                                        <tr>
+                                            <td><strong>${month.fullMonth}</strong></td>
+                                            <td class="number">${formatCurrency(month.sales)}</td>
+                                            <td class="number">${formatCurrency(costs[index].costs)}</td>
+                                            <td class="number ${profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(profit)}</td>
+                                            <td class="number ${margin >= 0 ? 'positive' : 'negative'}">${margin.toFixed(1)}%</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
             
             // Distruggi i grafici esistenti
             Object.values(charts).forEach(chart => {
@@ -382,37 +1062,46 @@
                 data: {
                     labels: salesData.map(d => d.month),
                     datasets: [{
-                        label: 'Ricavi (€)',
+                        label: 'Ricavi',
                         data: salesData.map(d => d.sales),
-                        borderColor: '#27ae60',
-                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        borderColor: '#38a169',
+                        backgroundColor: 'rgba(56, 161, 105, 0.1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
-                        pointBackgroundColor: '#27ae60',
-                        pointBorderColor: '#2ecc71',
+                        pointBackgroundColor: '#38a169',
+                        pointBorderColor: '#fff',
                         pointBorderWidth: 2,
-                        pointRadius: 5
+                        pointRadius: 6
                     }, {
-                        label: 'Costi (€)',
+                        label: 'Costi',
                         data: costsData.map(d => d.costs),
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderColor: '#e53e3e',
+                        backgroundColor: 'rgba(229, 62, 62, 0.1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
-                        pointBackgroundColor: '#e74c3c',
-                        pointBorderColor: '#c0392b',
+                        pointBackgroundColor: '#e53e3e',
+                        pointBorderColor: '#fff',
                         pointBorderWidth: 2,
-                        pointRadius: 5
+                        pointRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'top'
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -420,22 +1109,39 @@
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
-                                    return '€' + value.toLocaleString('it-IT');
-                                }
+                                    return '€' + (value / 1000).toFixed(0) + 'k';
+                                },
+                                font: {
+                                    size: 11
+                                },
+                                color: '#6b7280'
                             },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
+                                color: '#f3f4f6',
+                                borderColor: '#e5e7eb'
                             }
                         },
                         x: {
+                            ticks: {
+                                font: {
+                                    size: 11
+                                },
+                                color: '#6b7280'
+                            },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
+                                display: false
                             }
                         }
                     },
                     interaction: {
                         intersect: false,
                         mode: 'index'
+                    },
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10
+                        }
                     }
                 }
             });
@@ -456,14 +1162,16 @@
                     datasets: [{
                         label: 'Margine %',
                         data: margins,
-                        backgroundColor: margins.map(m => m >= 0 ? 'rgba(39, 174, 96, 0.8)' : 'rgba(231, 76, 60, 0.8)'),
-                        borderColor: margins.map(m => m >= 0 ? '#27ae60' : '#e74c3c'),
-                        borderWidth: 2,
-                        borderRadius: 4
+                        backgroundColor: margins.map(m => m >= 0 ? 'rgba(56, 161, 105, 0.8)' : 'rgba(229, 62, 62, 0.8)'),
+                        borderColor: margins.map(m => m >= 0 ? '#38a169' : '#e53e3e'),
+                        borderWidth: 0,
+                        borderRadius: 6,
+                        borderSkipped: false
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             display: false
@@ -473,17 +1181,34 @@
                         y: {
                             ticks: {
                                 callback: function(value) {
-                                    return value.toFixed(1) + '%';
-                                }
+                                    return value.toFixed(0) + '%';
+                                },
+                                font: {
+                                    size: 11
+                                },
+                                color: '#6b7280'
                             },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
+                                color: '#f3f4f6',
+                                borderColor: '#e5e7eb'
                             }
                         },
                         x: {
+                            ticks: {
+                                font: {
+                                    size: 11
+                                },
+                                color: '#6b7280'
+                            },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
+                                display: false
                             }
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10
                         }
                     }
                 }
@@ -493,790 +1218,385 @@
         function createSeasonalChart(seasonalData, year) {
             const ctx = document.getElementById('seasonalChart').getContext('2d');
             
+            // Crea una curva gaussiana per rappresentare la stagionalità
+            const seasons = ['Inverno', 'Primavera', 'Estate', 'Autunno'];
+            const salesValues = [
+                seasonalData.winter.sales,
+                seasonalData.spring.sales, 
+                seasonalData.summer.sales,
+                seasonalData.autumn.sales
+            ];
+            const profitValues = [
+                seasonalData.winter.profit,
+                seasonalData.spring.profit,
+                seasonalData.summer.profit,
+                seasonalData.autumn.profit
+            ];
+            
             charts.seasonal = new Chart(ctx, {
-                type: 'doughnut',
+                type: 'line',
                 data: {
-                    labels: ['🌸 Primavera', '☀️ Estate', '🍂 Autunno', '❄️ Inverno'],
+                    labels: seasons,
                     datasets: [{
-                        data: [seasonalData.spring.profit, seasonalData.summer.profit, seasonalData.autumn.profit, seasonalData.winter.profit],
-                        backgroundColor: [
-                            '#a8e6cf',
-                            '#ff6b6b', 
-                            '#ffd93d',
-                            '#74b9ff'
-                        ],
-                        borderWidth: 0,
-                        hoverOffset: 10
+                        label: 'Ricavi Stagionali',
+                        data: salesValues,
+                        borderColor: '#3182ce',
+                        backgroundColor: 'rgba(49, 130, 206, 0.1)',
+                        borderWidth: 4,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3182ce',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }, {
+                        label: 'Profitti Stagionali',
+                        data: profitValues,
+                        borderColor: '#38a169',
+                        backgroundColor: 'rgba(56, 161, 105, 0.1)',
+                        borderWidth: 4,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#38a169',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        pointRadius: 8,
+                        pointHoverRadius: 10
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                padding: 15,
+                                padding: 20,
+                                usePointStyle: true,
                                 font: {
-                                    size: 11
+                                    size: 11,
+                                    weight: '500'
                                 }
                             }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.label + ': ' + formatCurrency(context.parsed);
+                                    const label = context.dataset.label || '';
+                                    const value = formatCurrency(context.parsed.y);
+                                    return label + ': ' + value;
                                 }
                             }
                         }
                     },
-                    cutout: '50%'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + (value / 1000).toFixed(0) + 'k';
+                                },
+                                font: {
+                                    size: 11
+                                },
+                                color: '#6b7280'
+                            },
+                            grid: {
+                                color: '#f3f4f6',
+                                borderColor: '#e5e7eb'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                color: '#374151'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10
+                        }
+                    },
+                    elements: {
+                        line: {
+                            borderJoinStyle: 'round'
+                        }
+                    }
                 }
             });
         }
 
+        // Funzione PDF ottimizzata
         function generatePDF() {
-            const printBtn = document.getElementById('printBtn');
-            const printBtnText = document.getElementById('printBtnText');
+            const exportBtn = document.getElementById('exportBtn');
+            const exportBtnText = document.getElementById('exportBtnText');
             
-            // Disabilita il pulsante e mostra loading
-            printBtn.disabled = true;
-            printBtnText.innerHTML = '<div class="loading-spinner"></div> Generando PDF...';
+            exportBtn.disabled = true;
+            exportBtnText.innerHTML = '<div class="loading-spinner"></div> Generando...';
             
-            // Nascondi temporaneamente gli elementi non necessari per il PDF
-            const yearSelector = document.querySelector('.year-selector');
-            yearSelector.style.display = 'none';
-            
-            // Aggiungi informazioni di stampa
-            const printInfo = document.createElement('div');
-            printInfo.id = 'print-info';
-            printInfo.style.cssText = `
-                background: rgba(255, 255, 255, 0.95);
-                padding: 20px;
-                border-radius: 15px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-                text-align: center;
-                color: #2c3e50;
-            `;
-            printInfo.innerHTML = `
-                <h2>Report Stagionalità - Anno ${currentYear}</h2>
-                <p>Generato il ${new Date().toLocaleDateString('it-IT')} alle ${new Date().toLocaleTimeString('it-IT')}</p>
-                <p><strong>PLAYA SRL</strong> • P.IVA: 04805160233 • Verona</p>
-                <hr style="margin: 15px 0; border: 1px solid #bdc3c7;">
-            `;
-            
-            const container = document.querySelector('.container');
-            const dashboardContent = document.getElementById('dashboard-content');
-            container.insertBefore(printInfo, dashboardContent);
-            
-            // Configura html2canvas per una migliore qualità
-            const options = {
-                scale: 2, // Migliora la qualità
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                width: container.scrollWidth,
-                height: container.scrollHeight,
-                scrollX: 0,
-                scrollY: 0
-            };
-            
-            html2canvas(container, options).then(canvas => {
-                try {
-                    const { jsPDF } = window.jspdf;
+            try {
+                const sales = salesData[currentYear];
+                const costs = costsData[currentYear];
+                const kpis = calculateKPIs(sales, costs);
+                const seasonalData = calculateSeasonalData(sales, costs);
+                const insights = generateInsights(sales, costs, currentYear);
+                
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const margin = 20;
+                const contentWidth = pageWidth - 2 * margin;
+                let currentY = margin;
+                
+                function checkNewPage(neededHeight) {
+                    if (currentY + neededHeight > pageHeight - margin) {
+                        pdf.addPage();
+                        currentY = margin;
+                        return true;
+                    }
+                    return false;
+                }
+                
+                function drawColoredRect(x, y, width, height, color) {
+                    pdf.setFillColor(color[0], color[1], color[2]);
+                    pdf.rect(x, y, width, height, 'F');
+                }
+                
+                // HEADER PROFESSIONALE
+                pdf.setFontSize(26);
+                pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(26, 54, 93);
+                pdf.text('PLAYA SRL', margin, currentY);
+                currentY += 8;
+                
+                pdf.setFontSize(16);
+                pdf.setFont(undefined, 'normal');
+                pdf.setTextColor(107, 114, 128);
+                pdf.text(`Financial Dashboard - Anno ${currentYear}`, margin, currentY);
+                currentY += 6;
+                
+                pdf.setFontSize(10);
+                pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')} | P.IVA: 04805160233`, margin, currentY);
+                currentY += 20;
+                
+                // Linea elegante
+                pdf.setDrawColor(229, 231, 235);
+                pdf.setLineWidth(0.5);
+                pdf.line(margin, currentY, pageWidth - margin, currentY);
+                currentY += 20;
+                
+                // KPI EXECUTIVE SUMMARY
+                pdf.setFontSize(18);
+                pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(17, 24, 39);
+                pdf.text('Executive Summary', margin, currentY);
+                currentY += 15;
+                
+                const cardWidth = (contentWidth - 15) / 3;
+                const cardHeight = 25;
+                
+                // Card Ricavi
+                drawColoredRect(margin, currentY, cardWidth, cardHeight, [56, 161, 105]);
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('RICAVI TOTALI', margin + 5, currentY + 6);
+                pdf.setFontSize(16);
+                pdf.text(formatCurrency(kpis.totalSales), margin + 5, currentY + 18);
+                
+                // Card Costi
+                drawColoredRect(margin + cardWidth + 7.5, currentY, cardWidth, cardHeight, [229, 62, 62]);
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('COSTI TOTALI', margin + cardWidth + 12.5, currentY + 6);
+                pdf.setFontSize(16);
+                pdf.text(formatCurrency(kpis.totalCosts), margin + cardWidth + 12.5, currentY + 18);
+                
+                // Card Utile
+                const profitColor = kpis.totalProfit >= 0 ? [237, 137, 54] : [229, 62, 62];
+                drawColoredRect(margin + 2 * cardWidth + 15, currentY, cardWidth, cardHeight, profitColor);
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('UTILE OPERATIVO', margin + 2 * cardWidth + 20, currentY + 6);
+                pdf.setFontSize(16);
+                pdf.text(formatCurrency(kpis.totalProfit), margin + 2 * cardWidth + 20, currentY + 18);
+                
+                currentY += cardHeight + 25;
+                pdf.setTextColor(17, 24, 39);
+                
+                // TABELLA DATI DETTAGLIATA
+                checkNewPage(80);
+                pdf.setFontSize(16);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('Analisi Mensile Dettagliata', margin, currentY);
+                currentY += 15;
+                
+                // Header tabella elegante
+                const colWidths = [35, 32, 32, 32, 32];
+                let startX = margin;
+                
+                drawColoredRect(startX, currentY, contentWidth, 10, [249, 250, 251]);
+                pdf.setFillColor(17, 24, 39);
+                pdf.rect(startX, currentY, contentWidth, 2, 'F');
+                
+                pdf.setTextColor(75, 85, 99);
+                pdf.setFontSize(9);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('MESE', startX + 2, currentY + 7);
+                pdf.text('RICAVI', startX + colWidths[0] + 2, currentY + 7);
+                pdf.text('COSTI', startX + colWidths[0] + colWidths[1] + 2, currentY + 7);
+                pdf.text('UTILE', startX + colWidths[0] + colWidths[1] + colWidths[2] + 2, currentY + 7);
+                pdf.text('MARGINE %', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 2, currentY + 7);
+                
+                currentY += 10;
+                
+                // Righe dati con styling alternato
+                sales.forEach((month, index) => {
+                    checkNewPage(7);
                     
-                    // Calcola le dimensioni per A4
-                    const imgWidth = 210; // A4 width in mm
-                    const pageHeight = 297; // A4 height in mm
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    const profit = month.sales - costs[index].costs;
+                    const margin = month.sales > 0 ? (profit / month.sales) * 100 : 0;
                     
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    
-                    if (imgHeight <= pageHeight) {
-                        // Tutto in una pagina
-                        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgWidth, imgHeight);
-                    } else {
-                        // Multipagina
-                        let position = 0;
-                        let pageNumber = 1;
-                        
-                        while (position < imgHeight) {
-                            if (pageNumber > 1) {
-                                pdf.addPage();
-                            }
-                            
-                            const sourceY = (position * canvas.height) / imgHeight;
-                            const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
-                            
-                            // Crea un canvas temporaneo per questa sezione
-                            const tempCanvas = document.createElement('canvas');
-                            const tempCtx = tempCanvas.getContext('2d');
-                            tempCanvas.width = canvas.width;
-                            tempCanvas.height = sourceHeight;
-                            
-                            tempCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-                            
-                            const sectionHeight = (sourceHeight * imgWidth) / canvas.width;
-                            pdf.addImage(tempCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgWidth, sectionHeight);
-                            
-                            position += pageHeight;
-                            pageNumber++;
-                        }
+                    if (index % 2 === 0) {
+                        drawColoredRect(startX, currentY, contentWidth, 6, [249, 250, 251]);
                     }
                     
-                    // Salva il PDF
-                    const fileName = `PLAYA_SRL_Stagionalita_${currentYear}_${new Date().toISOString().split('T')[0]}.pdf`;
-                    pdf.save(fileName);
+                    pdf.setFontSize(8);
+                    pdf.setFont(undefined, 'normal');
+                    pdf.setTextColor(55, 65, 81);
                     
-                } catch (error) {
-                    console.error('Errore nella generazione del PDF:', error);
-                    alert('Errore nella generazione del PDF. Riprova.');
-                } finally {
-                    // Ripristina l'interfaccia
-                    cleanup();
-                }
-            }).catch(error => {
-                console.error('Errore in html2canvas:', error);
-                alert('Errore nella cattura della schermata. Riprova.');
-                cleanup();
-            });
-            
-            function cleanup() {
-                // Rimuovi le informazioni di stampa
-                const printInfoElement = document.getElementById('print-info');
-                if (printInfoElement) {
-                    printInfoElement.remove();
-                }
+                    pdf.text(month.fullMonth, startX + 2, currentY + 4);
+                    pdf.text(formatCurrency(month.sales), startX + colWidths[0] + 2, currentY + 4);
+                    pdf.text(formatCurrency(costs[index].costs), startX + colWidths[0] + colWidths[1] + 2, currentY + 4);
+                    
+                    pdf.setTextColor(profit >= 0 ? 56 : 229, profit >= 0 ? 161 : 62, profit >= 0 ? 105 : 62);
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text(formatCurrency(profit), startX + colWidths[0] + colWidths[1] + colWidths[2] + 2, currentY + 4);
+                    pdf.text(margin.toFixed(1) + '%', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 2, currentY + 4);
+                    
+                    currentY += 6;
+                });
                 
-                // Ripristina la visibilità degli elementi
-                yearSelector.style.display = 'flex';
+                currentY += 20;
                 
-                // Riattiva il pulsante
-                printBtn.disabled = false;
-                printBtnText.innerHTML = '📄 Scarica PDF';
+                // ANALISI STAGIONALE PROFESSIONALE
+                checkNewPage(60);
+                pdf.setFontSize(16);
+                pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(17, 24, 39);
+                pdf.text('Analisi Performance Stagionali', margin, currentY);
+                currentY += 15;
+                
+                const seasonCardWidth = (contentWidth - 15) / 2;
+                const seasonCardHeight = 30;
+                
+                const seasons = [
+                    { name: 'PRIMAVERA', data: seasonalData.spring, color: [163, 213, 184] },
+                    { name: 'ESTATE', data: seasonalData.summer, color: [255, 234, 167] },
+                    { name: 'AUTUNNO', data: seasonalData.autumn, color: [250, 177, 160] },
+                    { name: 'INVERNO', data: seasonalData.winter, color: [116, 185, 255] }
+                ];
+                
+                seasons.forEach((season, index) => {
+                    const x = margin + (index % 2) * (seasonCardWidth + 7.5);
+                    const y = currentY + Math.floor(index / 2) * (seasonCardHeight + 10);
+                    
+                    drawColoredRect(x, y, seasonCardWidth, seasonCardHeight, season.color);
+                    
+                    pdf.setTextColor(55, 65, 81);
+                    pdf.setFontSize(12);
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text(season.name, x + 5, y + 8);
+                    
+                    pdf.setFontSize(8);
+                    pdf.setFont(undefined, 'normal');
+                    pdf.text(`Ricavi: ${formatCurrency(season.data.sales)}`, x + 5, y + 15);
+                    pdf.text(`Costi: ${formatCurrency(season.data.costs)}`, x + 5, y + 19);
+                    pdf.text(`Utile: ${formatCurrency(season.data.profit)}`, x + 5, y + 23);
+                    const seasonMargin = season.data.sales > 0 ? season.data.profit / season.data.sales : 0;
+                    pdf.text(`Margine: ${formatPercentage(seasonMargin)}`, x + 5, y + 27);
+                });
+                
+                currentY += seasonCardHeight * 2 + 30;
+                
+                // INSIGHTS AZIENDALI
+                checkNewPage(40);
+                pdf.setFontSize(16);
+                pdf.setFont(undefined, 'bold');
+                pdf.setTextColor(17, 24, 39);
+                pdf.text('Key Business Insights', margin, currentY);
+                currentY += 15;
+                
+                insights.forEach(insight => {
+                    checkNewPage(12);
+                    
+                    // Bullet point elegante
+                    pdf.setFillColor(49, 130, 206);
+                    pdf.circle(margin + 3, currentY - 1, 1, 'F');
+                    
+                    pdf.setFontSize(9);
+                    pdf.setFont(undefined, 'normal');
+                    pdf.setTextColor(55, 65, 81);
+                    
+                    const lines = pdf.splitTextToSize(insight.text, contentWidth - 15);
+                    pdf.text(lines, margin + 8, currentY);
+                    currentY += lines.length * 4 + 3;
+                });
+                
+                // FOOTER PROFESSIONALE
+                currentY += 20;
+                checkNewPage(25);
+                
+                pdf.setDrawColor(229, 231, 235);
+                pdf.setLineWidth(0.5);
+                pdf.line(margin, currentY, pageWidth - margin, currentY);
+                currentY += 10;
+                
+                pdf.setFontSize(7);
+                pdf.setTextColor(156, 163, 175);
+                pdf.text('PLAYA SRL | Via Esempio 123, Verona | P.IVA: 04805160233', margin, currentY);
+                pdf.text(`Report confidenziale generato il ${new Date().toLocaleDateString('it-IT')}`, margin, currentY + 4);
+                pdf.text('Documento riservato - Solo per uso interno aziendale', pageWidth - margin - 70, currentY + 4);
+                
+                // Salva il PDF con nome professionale
+                const fileName = `PLAYA_SRL_Financial_Report_${currentYear}_${new Date().toISOString().split('T')[0]}.pdf`;
+                pdf.save(fileName);
+                
+                // Feedback positivo
+                setTimeout(() => {
+                    alert('✅ Report esportato con successo!\n\nIl documento PDF è stato generato e scaricato.');
+                }, 100);
+                
+            } catch (error) {
+                console.error('Errore durante l\'esportazione:', error);
+                alert('❌ Errore durante l\'esportazione del report.\n\nRiprova o contatta il supporto tecnico.');
+            } finally {
+                exportBtn.disabled = false;
+                exportBtnText.innerHTML = 'Esporta Report';
             }
         }
 
-        // Carica la dashboard iniziale
+        // Inizializzazione
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboard(currentYear);
         });
-    </script><!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Stagionalità Completo - PLAYA SRL</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            color: #2c3e50;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .header .subtitle {
-            font-size: 1.2em;
-            color: #7f8c8d;
-            margin-bottom: 15px;
-        }
-
-        .company-info {
-            background: linear-gradient(45deg, #3498db, #2980b9);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            display: inline-block;
-        }
-
-        .year-selector {
-            text-align: center;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .year-tabs {
-            display: inline-flex;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 5px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .print-btn {
-            background: linear-gradient(45deg, #27ae60, #2ecc71);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 15px;
-            font-weight: 600;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .print-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
-            background: linear-gradient(45deg, #2ecc71, #27ae60);
-        }
-
-        .print-btn:active {
-            transform: translateY(0);
-        }
-
-        .print-btn:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .loading-spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @media print {
-            body {
-                background: white;
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
-            }
-            .year-selector, .print-btn {
-                display: none;
-            }
-            .container {
-                padding: 10px;
-                max-width: 100%;
-            }
-        }
-
-        .year-tab {
-            padding: 12px 25px;
-            margin: 0 2px;
-            border: none;
-            background: transparent;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 1.1em;
-            transition: all 0.3s ease;
-            color: #666;
-        }
-
-        .year-tab.active {
-            background: linear-gradient(45deg, #e74c3c, #c0392b);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
-        }
-
-        .year-tab:hover:not(.active) {
-            background: rgba(52, 152, 219, 0.1);
-            color: #3498db;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        .kpi-section {
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .kpi-card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .kpi-card.revenue { border-left: 5px solid #27ae60; }
-        .kpi-card.costs { border-left: 5px solid #e74c3c; }
-        .kpi-card.profit { border-left: 5px solid #f39c12; }
-        .kpi-card.margin { border-left: 5px solid #9b59b6; }
-        .kpi-card.peak-month { border-left: 5px solid #3498db; }
-
-        .kpi-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-
-        .kpi-label {
-            font-size: 0.85em;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .chart-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            position: relative;
-        }
-
-        .chart-title {
-            font-size: 1.3em;
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .three-column {
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 25px;
-        }
-
-        .seasonal-analysis {
-            grid-column: 1 / -1;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .seasonal-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .season-card {
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .season-card.spring { background: linear-gradient(135deg, #a8e6cf, #7fcdcd); }
-        .season-card.summer { background: linear-gradient(135deg, #ffd93d, #ff6b6b); }
-        .season-card.autumn { background: linear-gradient(135deg, #ff9a56, #ffd93d); }
-        .season-card.winter { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; }
-
-        .season-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .season-months {
-            font-size: 0.85em;
-            opacity: 0.8;
-            margin-bottom: 15px;
-        }
-
-        .season-metrics {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            text-align: center;
-        }
-
-        .metric-item {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px;
-            border-radius: 8px;
-        }
-
-        .metric-label {
-            font-size: 0.75em;
-            opacity: 0.8;
-            margin-bottom: 2px;
-        }
-
-        .metric-value {
-            font-size: 1.1em;
-            font-weight: bold;
-        }
-
-        .insights {
-            grid-column: 1 / -1;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .insight-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: rgba(52, 152, 219, 0.1);
-            border-radius: 10px;
-            border-left: 4px solid #3498db;
-        }
-
-        .insight-icon {
-            font-size: 1.5em;
-            margin-right: 15px;
-        }
-
-        @media (max-width: 1200px) {
-            .three-column {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard, .three-column {
-                grid-template-columns: 1fr;
-            }
-            
-            .kpi-section {
-                grid-template-columns: 1fr 1fr;
-            }
-            
-            .year-tabs {
-                flex-direction: column;
-                width: 100%;
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.8s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header fade-in">
-            <h1>📊 Dashboard Stagionalità Completo</h1>
-            <div class="subtitle">Analisi Ricavi, Costi e Marginalità</div>
-            <div class="company-info">
-                <strong>PLAYA SRL</strong> • P.IVA: 04805160233 • Verona • Ristorazione con Somministrazione
-            </div>
-        </div>
-
-        <div class="year-selector fade-in">
-            <div class="year-tabs">
-                <button class="year-tab active" onclick="selectYear(2024)">2024</button>
-                <button class="year-tab" onclick="selectYear(2023)">2023</button>
-                <button class="year-tab" onclick="selectYear(2022)">2022</button>
-            </div>
-            <button id="printBtn" class="print-btn" onclick="generatePDF()">
-                <span id="printBtnText">📄 Scarica PDF</span>
-            </button>
-        </div>
-
-        <div id="dashboard-content" class="fade-in">
-            <!-- Il contenuto verrà generato dinamicamente -->
-        </div>
-    </div>
-
-    <script>
-        // Dati ricavi (dal dashboard originale)
-        const salesData = {
-            2024: [
-                {month: 'Gen', fullMonth: 'Gennaio', sales: 1446.40, vat: 149.38},
-                {month: 'Feb', fullMonth: 'Febbraio', sales: 440.20, vat: 40.02},
-                {month: 'Mar', fullMonth: 'Marzo', sales: 5144.26, vat: 468.31},
-                {month: 'Apr', fullMonth: 'Aprile', sales: 12844.05, vat: 1167.64},
-                {month: 'Mag', fullMonth: 'Maggio', sales: 10506.30, vat: 955.13},
-                {month: 'Giu', fullMonth: 'Giugno', sales: 24316.90, vat: 2441.95},
-                {month: 'Lug', fullMonth: 'Luglio', sales: 42543.96, vat: 4643.53},
-                {month: 'Ago', fullMonth: 'Agosto', sales: 43152.78, vat: 4642.03},
-                {month: 'Set', fullMonth: 'Settembre', sales: 5184.00, vat: 525.71},
-                {month: 'Ott', fullMonth: 'Ottobre', sales: 4751.60, vat: 441.61},
-                {month: 'Nov', fullMonth: 'Novembre', sales: 933.20, vat: 85.55},
-                {month: 'Dic', fullMonth: 'Dicembre', sales: 4573.30, vat: 415.76}
-            ],
-            2023: [
-                {month: 'Gen', fullMonth: 'Gennaio', sales: 0, vat: 0},
-                {month: 'Feb', fullMonth: 'Febbraio', sales: 0, vat: 0},
-                {month: 'Mar', fullMonth: 'Marzo', sales: 0, vat: 0},
-                {month: 'Apr', fullMonth: 'Aprile', sales: 0, vat: 0},
-                {month: 'Mag', fullMonth: 'Maggio', sales: 659.70, vat: 67.73},
-                {month: 'Giu', fullMonth: 'Giugno', sales: 18257.20, vat: 1937.93},
-                {month: 'Lug', fullMonth: 'Luglio', sales: 31381.72, vat: 3334.46},
-                {month: 'Ago', fullMonth: 'Agosto', sales: 35557.91, vat: 3995.69},
-                {month: 'Set', fullMonth: 'Settembre', sales: 6690.80, vat: 693.48},
-                {month: 'Ott', fullMonth: 'Ottobre', sales: 1443.90, vat: 134.12},
-                {month: 'Nov', fullMonth: 'Novembre', sales: 155.60, vat: 14.15},
-                {month: 'Dic', fullMonth: 'Dicembre', sales: 382.00, vat: 34.73}
-            ],
-            2022: [
-                {month: 'Gen', fullMonth: 'Gennaio', sales: 0, vat: 0},
-                {month: 'Feb', fullMonth: 'Febbraio', sales: 692.50, vat: 62.95},
-                {month: 'Mar', fullMonth: 'Marzo', sales: 0, vat: 0},
-                {month: 'Apr', fullMonth: 'Aprile', sales: 0, vat: 0},
-                {month: 'Mag', fullMonth: 'Maggio', sales: 4526.05, vat: 460.23},
-                {month: 'Giu', fullMonth: 'Giugno', sales: 21177.97, vat: 2327.39},
-                {month: 'Lug', fullMonth: 'Luglio', sales: 25099.93, vat: 2791.51},
-                {month: 'Ago', fullMonth: 'Agosto', sales: 22195.70, vat: 2450.09},
-                {month: 'Set', fullMonth: 'Settembre', sales: 2168.20, vat: 258.20},
-                {month: 'Ott', fullMonth: 'Ottobre', sales: 560.00, vat: 50.91},
-                {month: 'Nov', fullMonth: 'Novembre', sales: 0, vat: 0},
-                {month: 'Dic', fullMonth: 'Dicembre', sales: 0, vat: 0}
-            ]
-        };
-
-        // Dati costi estratti dai registri
-        const costsData = {
-            2024: [
-                {month: 'Gen', fullMonth: 'Gennaio', costs: 10610.98},
-                {month: 'Feb', fullMonth: 'Febbraio', costs: 5758.81},
-                {month: 'Mar', fullMonth: 'Marzo', costs: 11004.29},
-                {month: 'Apr', fullMonth: 'Aprile', costs: 14395.90},
-                {month: 'Mag', fullMonth: 'Maggio', costs: 16713.35},
-                {month: 'Giu', fullMonth: 'Giugno', costs: 21041.74},
-                {month: 'Lug', fullMonth: 'Luglio', costs: 26653.67},
-                {month: 'Ago', fullMonth: 'Agosto', costs: 24921.83},
-                {month: 'Set', fullMonth: 'Settembre', costs: 12299.38},
-                {month: 'Ott', fullMonth: 'Ottobre', costs: 10041.83},
-                {month: 'Nov', fullMonth: 'Novembre', costs: 4957.58},
-                {month: 'Dic', fullMonth: 'Dicembre', costs: 9559.62}
-            ],
-            2023: [
-                {month: 'Gen', fullMonth: 'Gennaio', costs: 3079.67},
-                {month: 'Feb', fullMonth: 'Febbraio', costs: 2298.70},
-                {month: 'Mar', fullMonth: 'Marzo', costs: 3182.12},
-                {month: 'Apr', fullMonth: 'Aprile', costs: 1973.67},
-                {month: 'Mag', fullMonth: 'Maggio', costs: 3805.06},
-                {month: 'Giu', fullMonth: 'Giugno', costs: 16139.73},
-                {month: 'Lug', fullMonth: 'Luglio', costs: 21359.67},
-                {month: 'Ago', fullMonth: 'Agosto', costs: 26282.79},
-                {month: 'Set', fullMonth: 'Settembre', costs: 21658.86},
-                {month: 'Ott', fullMonth: 'Ottobre', costs: 8384.57},
-                {month: 'Nov', fullMonth: 'Novembre', costs: 8727.20},
-                {month: 'Dic', fullMonth: 'Dicembre', costs: 5112.35}
-            ],
-            2022: [
-                {month: 'Gen', fullMonth: 'Gennaio', costs: 1344.00},
-                {month: 'Feb', fullMonth: 'Febbraio', costs: 2197.00},
-                {month: 'Mar', fullMonth: 'Marzo', costs: 2289.00},
-                {month: 'Apr', fullMonth: 'Aprile', costs: 2348.00},
-                {month: 'Mag', fullMonth: 'Maggio', costs: 8009.93},
-                {month: 'Giu', fullMonth: 'Giugno', costs: 20215.33},
-                {month: 'Lug', fullMonth: 'Luglio', costs: 23337.81},
-                {month: 'Ago', fullMonth: 'Agosto', costs: 18144.80},
-                {month: 'Set', fullMonth: 'Settembre', costs: 6688.47},
-                {month: 'Ott', fullMonth: 'Ottobre', costs: 9303.16},
-                {month: 'Nov', fullMonth: 'Novembre', costs: 3580.29},
-                {month: 'Dic', fullMonth: 'Dicembre', costs: 2316.89}
-            ]
-        };
-
-        let currentYear = 2024;
-        let charts = {};
-
-        function formatCurrency(value) {
-            return new Intl.NumberFormat('it-IT', {
-                style: 'currency',
-                currency: 'EUR'
-            }).format(value);
-        }
-
-        function formatPercentage(value) {
-            return (value * 100).toFixed(1) + '%';
-        }
-
-        function selectYear(year) {
-            currentYear = year;
-            
-            // Aggiorna i tab
-            document.querySelectorAll('.year-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Ricarica la dashboard
-            loadDashboard(year);
-        }
-
-        function selectYear(year) {
-            currentYear = year;
-            
-            // Aggiorna i tab
-            document.querySelectorAll('.year-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Ricarica la dashboard
-            loadDashboard(year);
-        }
-
-        function calculateKPIs(salesData, costsData) {
-            const totalSales = salesData.reduce((sum, m) => sum + m.sales, 0);
-            const totalCosts = costsData.reduce((sum, m) => sum + m.costs, 0);
-            const totalProfit = totalSales - totalCosts;
-            const marginPercentage = totalSales > 0 ? totalProfit / totalSales : 0;
-            
-            const peakSalesMonth = salesData.reduce((max, m) => m.sales > max.sales ? m : max, {sales: 0, fullMonth: 'N/A'});
-            
-            return {
-                totalSales,
-                totalCosts,
-                totalProfit,
-                marginPercentage,
-                peakMonth: peakSalesMonth.fullMonth
-            };
-        }
-
-        function calculateSeasonalData(salesData, costsData) {
-            const seasons = {
-                spring: { sales: 0, costs: 0, profit: 0 }, // Mar, Apr, Mag
-                summer: { sales: 0, costs: 0, profit: 0 }, // Giu, Lug, Ago
-                autumn: { sales: 0, costs: 0, profit: 0 }, // Set, Ott, Nov
-                winter: { sales: 0, costs: 0, profit: 0 }  // Dic, Gen, Feb
-            };
-
-            // Primavera (Mar=2, Apr=3, Mag=4)
-            seasons.spring.sales = salesData[2].sales + salesData[3].sales + salesData[4].sales;
-            seasons.spring.costs = costsData[2].costs + costsData[3].costs + costsData[4].costs;
-            seasons.spring.profit = seasons.spring.sales - seasons.spring.costs;
-
-            // Estate (Giu=5, Lug=6, Ago=7)
-            seasons.summer.sales = salesData[5].sales + salesData[6].sales + salesData[7].sales;
-            seasons.summer.costs = costsData[5].costs + costsData[6].costs + costsData[7].costs;
-            seasons.summer.profit = seasons.summer.sales - seasons.summer.costs;
-
-            // Autunno (Set=8, Ott=9, Nov=10)
-            seasons.autumn.sales = salesData[8].sales + salesData[9].sales + salesData[10].sales;
-            seasons.autumn.costs = costsData[8].costs + costsData[9].costs + costsData[10].costs;
-            seasons.autumn.profit = seasons.autumn.sales - seasons.autumn.costs;
-
-            // Inverno (Dic=11, Gen=0, Feb=1)
-            seasons.winter.sales = salesData[11].sales + salesData[0].sales + salesData[1].sales;
-            seasons.winter.costs = costsData[11].costs + costsData[0].costs + costsData[1].costs;
-            seasons.winter.profit = seasons.winter.sales - seasons.winter.costs;
-
-            return seasons;
-        }
-
-        function generateInsights(salesData, costsData, year) {
-            const kpis = calculateKPIs(salesData, costsData);
-            const insights = [];
-
-            insights.push({
-                icon: '💰',
-                text: `Nel ${year} il fatturato è stato di ${formatCurrency(kpis.totalSales)} con costi di ${formatCurrency(kpis.totalCosts)}.`
-            });
-            
-            insights.push({
-                icon: '📈',
-                text: `Il margine operativo è stato di ${formatCurrency(kpis.totalProfit)} (${formatPercentage(kpis.marginPercentage)}).`
-            });
-            
-            insights.push({
-                icon: '🏆',
-                text: `Il mese migliore è stato ${kpis.peakMonth} in termini di fatturato.`
-            });
-
-            // Analisi stagionale
-            const seasonal = calculateSeasonalData(salesData, costsData);
-            const bestSeason = Object.entries(seasonal)
-                .reduce((max, [name, data]) => data.profit > max.profit ? {name, ...data} : max, {name: '', profit: -Infinity});
-            
-            const seasonNames = {
-                'spring': 'Primavera',
-                'summer': 'Estate', 
-                'autumn': 'Autunno',
-                'winter': 'Inverno'
-            };
-            
-            insights.push({
-                icon: '🌟',
-                text: `La stagione più redditizia è l'${seasonNames[bestSeason.name]} con un utile di ${formatCurrency(bestSeason.profit)}.`
-            });
-
-            return insights;
-        }
-
-        function loadDashboard(year) {
-            const sales = salesData[year];
-            const costs = costsData[year];
-            const kpis = calculateKPIs(sales, costs);
-            const seasonalData = calculateSeasonalData(sales, costs);
-            const insights = generateInsights(sales, costs, year);
-
-            const dashboardHTML = `
-                <div class="kpi-section">
-                    <div class="kpi-card revenue">
-                        <div class="kpi-value">${formatCurrency(kpis.totalSales)}</div>
-                        <div class="kpi-label">Ricavi Totali</div>
-                    </div>
-                    <div class="kpi-card costs">
-                        <div class="kpi-value">${formatCurrency(kpis.totalCosts)}</div>
+    </script>
+</body>
+</html>
